@@ -11,6 +11,8 @@ use crate::{
     },
     Protocol,
 };
+use num_bigint::BigUint;
+use num_traits::One;
 use serde::{Deserialize, Deserializer};
 use std::iter;
 
@@ -19,8 +21,24 @@ pub mod transcript;
 #[cfg(test)]
 mod test;
 
+fn circom_gen<F: PrimeField>(k: usize) -> F {
+    let modulus = BigUint::from_bytes_le((-F::one()).to_repr().as_ref()) + BigUint::one();
+    let modulus_half = (modulus.clone() / BigUint::from(2_u32)).to_u64_digits();
+    let t = ((modulus - BigUint::one()) / BigUint::from(2_u32).pow(F::S)).to_u64_digits();
+    let mut nqr = F::one();
+    while nqr.pow_vartime(modulus_half.clone()) == F::one() {
+        nqr += F::one();
+    }
+    let mut omega = nqr.pow_vartime(t);
+    (0..(F::S - k as u32)).for_each(|_| {
+        omega = omega.square();
+    });
+    omega
+}
+
 pub fn compile<M: MultiMillerLoop>(vk: &VerifyingKey<M>) -> Protocol<M::G1Affine> {
-    let domain = Domain::new(vk.k, vk.gen);
+    let gen = circom_gen(vk.k);
+    let domain = Domain::new(vk.k, gen);
 
     let [q_m, q_l, q_r, q_o, q_c, s_1, s_2, s_3, pi, a, b, c, z] =
         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(|poly| Query::new(poly, Rotation::cur()));
@@ -84,8 +102,6 @@ pub struct VerifyingKey<M: MultiMillerLoop> {
     num_instnace: usize,
     #[serde(rename(deserialize = "power"))]
     k: usize,
-    #[serde(rename(deserialize = "w"), deserialize_with = "deserialize_scalar")]
-    gen: M::Scalar,
     #[serde(rename(deserialize = "k1"), deserialize_with = "deserialize_scalar")]
     k_1: M::Scalar,
     #[serde(rename(deserialize = "k2"), deserialize_with = "deserialize_scalar")]

@@ -5,10 +5,9 @@ edition = "2021"
 
 [dependencies]
 plonk_verifier = { path = ".." }
+rand = "0.8"
 halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2022_09_10", package = "halo2_proofs" }
 halo2_curves = { git = "https://github.com/privacy-scaling-explorations/halo2curves", tag = "0.2.1", package = "halo2curves" }
-
-halo2_kzg_srs = {git = "https://github.com/han0110/halo2-kzg-srs"}
 
 # cli
 clap = { version = "3.2.22", features = ["derive"] }
