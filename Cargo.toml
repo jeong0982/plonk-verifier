@@ -1,5 +1,5 @@
 [package]
-name = "plonk-verifier"
+name = "plonk_verifier"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,9 +11,6 @@ num-traits = "0.2"
 rand = "0.8"
 rand_chacha = "0.3.1"
 halo2_curves = { git = "https://github.com/privacy-scaling-explorations/halo2curves", tag = "0.2.1", package = "halo2curves" }
-
-# cli
-clap = { version = "3.2.22", features = ["derive"] }
 
 # system_circom
 serde = { version = "1.0", features = ["derive"], optional = true }

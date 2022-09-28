@@ -1,0 +1,25 @@
+[package]
+name = "circom-plonk-verifier"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+plonk_verifier = { path = ".." }
+halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2022_09_10", package = "halo2_proofs" }
+halo2_curves = { git = "https://github.com/privacy-scaling-explorations/halo2curves", tag = "0.2.1", package = "halo2curves" }
+
+halo2_kzg_srs = {git = "https://github.com/han0110/halo2-kzg-srs"}
+
+# cli
+clap = { version = "3.2.22", features = ["derive"] }
+
+# system_circom
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0.85" }
+
+# loader_halo2
+halo2_wrong_transcript = { git = "https://github.com/privacy-scaling-explorations/halo2wrong", tag = "v2022_09_09", package = "transcript" }
+poseidon = { git = "https://github.com/privacy-scaling-explorations/poseidon", branch = "padding" }
+
+# system_halo2
+halo2_wrong_ecc = { git = "https://github.com/privacy-scaling-explorations/halo2wrong", tag = "v2022_09_09", package = "ecc" }

@@ -1,10 +1,9 @@
-pub mod accumulation;
 pub mod arithmetic;
 pub mod expression;
 pub mod msm;
 pub mod transcript;
 
-pub(crate) use itertools::Itertools;
+pub use itertools::Itertools;
 
 #[macro_export]
 macro_rules! collect_slice {

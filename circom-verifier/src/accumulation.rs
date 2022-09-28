@@ -1,4 +1,4 @@
-use crate::{
+use plonk_verifier::{
     loader::{
         halo2::{self, test::MainGateWithRangeConfig},
         native::NativeLoader,
@@ -9,10 +9,7 @@ use crate::{
     },
     system::{
         self,
-        circom::{
-            compile,
-            Proof, PublicSignals, VerifyingKey,
-        },
+        circom::{compile, Proof, PublicSignals, VerifyingKey},
     },
     util::{arithmetic::fe_to_limbs, transcript::Transcript, Itertools},
     verifier::{self, PlonkVerifier},
@@ -133,7 +130,7 @@ impl Accumulation {
                     .to_compressed_le()
             })
             .collect_vec();
-        
+
         let accumulator = public_signals
             .iter()
             .zip(proofs.iter())
