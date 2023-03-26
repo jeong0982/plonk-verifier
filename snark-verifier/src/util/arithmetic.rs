@@ -303,6 +303,13 @@ pub fn powers<F: Field>(scalar: F) -> impl Iterator<Item = F> {
     iter::successors(Some(F::one()), move |power| Some(scalar * power))
 }
 
+pub fn powers_non_field<F>(scalar: F) -> impl Iterator<Item = F>
+where
+    for<'a> F: Mul<&'a F, Output = F> + Clone + One,
+{
+    iter::successors(Some(F::one()), move |power| Some(scalar.clone() * power))
+}
+
 /// Compute inner product of 2 slice of [`Field`].
 pub fn inner_product<F: Field>(lhs: &[F], rhs: &[F]) -> F {
     lhs.iter()
