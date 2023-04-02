@@ -2,7 +2,7 @@
 
 // use crate::{
 //     loader::{
-//         evm::{encode_calldata, EvmLoader},
+//         evm::{encode_calldata, EvmLoader, Address},
 //         native::NativeLoader,
 //     },
 //     pcs::kzg::{Gwc19, KzgOnSameCurve},
@@ -12,8 +12,6 @@
 //     },
 //     verifier::{self, PlonkVerifier},
 // };
-// use ethereum_types::Address;
-// use foundry_evm::executor::{fork::MultiFork, Backend, ExecutorBuilder};
 // use halo2_curves::bn256::{Bn256, Fq, Fr, G1Affine};
 
 // const LIMBS: usize = 4;

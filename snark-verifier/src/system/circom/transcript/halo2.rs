@@ -7,12 +7,13 @@ use crate::{
     util::{
         arithmetic::{fe_to_fe, CurveAffine, PrimeField},
         hash::Poseidon,
-        transcript::{Transcript, TranscriptRead, TranscriptWrite,},
+        transcript::{Transcript, TranscriptRead, TranscriptWrite},
         Itertools,
     },
     Error,
 };
-use halo2_proofs::circuit::Value;
+use halo2_proofs::circuit::{AssignedCell, Value};
+use halo2_wrong_ecc::BaseFieldEccChip;
 use std::{
     io::{self, Read, Write},
     rc::Rc,
@@ -31,16 +32,34 @@ where
     ) -> Result<Vec<Self::AssignedScalar>, Error>;
 }
 
+impl<'a, C: CurveAffine, const LIMBS: usize, const BITS: usize> NativeEncoding<'a, C>
+    for BaseFieldEccChip<C, LIMBS, BITS>
+{
+    fn encode(
+        &self,
+        _: &mut Self::Context,
+        ec_point: &Self::AssignedEcPoint,
+    ) -> Result<Vec<AssignedCell<C::Scalar, C::Scalar>>, crate::Error> {
+        Ok(vec![
+            ec_point.x().native().clone(),
+            ec_point.y().native().clone(),
+        ])
+    }
+}
+
 #[derive(Debug)]
 pub struct PoseidonTranscript<
-    C: CurveAffine,
-    L: Loader<C>,
+    C,
+    L,
     S,
     const T: usize,
     const RATE: usize,
     const R_F: usize,
     const R_P: usize,
-> {
+> where
+    C: CurveAffine,
+    L: Loader<C>,
+{
     loader: L,
     stream: S,
     buf: Poseidon<C::Scalar, <L as ScalarLoader<C::Scalar>>::LoadedScalar, T, RATE>,
@@ -79,8 +98,7 @@ where
 
     fn squeeze_challenge(&mut self) -> Scalar<'a, C, EccChip> {
         if self.adjacent_challenge.is_some() {
-            self.buf
-                .update(&[self.adjacent_challenge.take().unwrap()]);
+            self.buf.update(&[self.adjacent_challenge.take().unwrap()]);
         }
         self.buf.squeeze()
     }

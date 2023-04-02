@@ -1,8 +1,8 @@
 use crate::{
     util::{
         arithmetic::{
-            powers_non_field, Curve, CurveAffine, CurveExt, Domain, Field, GroupEncoding, MultiMillerLoop,
-            PrimeCurveAffine, PrimeField, Rotation,
+            powers_non_field, Curve, CurveAffine, CurveExt, Domain, Field, GroupEncoding,
+            MultiMillerLoop, PrimeCurveAffine, PrimeField, Rotation,
         },
         Itertools,
     },
