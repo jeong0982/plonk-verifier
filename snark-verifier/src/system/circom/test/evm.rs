@@ -1,74 +1,78 @@
-// use std::rc::Rc;
+use std::rc::Rc;
 
-// use crate::{
-//     loader::{
-//         evm::{encode_calldata, EvmLoader, Address},
-//         native::NativeLoader,
-//     },
-//     pcs::kzg::{Gwc19, KzgOnSameCurve},
-//     system::circom::{
-//         compile, test::testdata::TESTDATA_EVM, transcript::evm::EvmTranscript, Proof,
-//         PublicSignals, VerifyingKey,
-//     },
-//     verifier::{self, PlonkVerifier},
-// };
-// use halo2_curves::bn256::{Bn256, Fq, Fr, G1Affine};
+use crate::{
+    loader::{
+        evm::{self, encode_calldata, EvmLoader, Address, ExecutorBuilder},
+        native::NativeLoader,
+    },
+    pcs::kzg::{Gwc19, KzgAs, LimbsEncoding},
+    system::circom::{
+        compile, test::testdata::TESTDATA_EVM, Proof,
+        PublicSignals, VerifyingKey, transcript::evm::EvmTranscript,
+    },
+    verifier::{self, SnarkVerifier},
+};
+use halo2_curves::bn256::{Bn256, Fq, Fr, G1Affine};
 
-// const LIMBS: usize = 4;
-// const BITS: usize = 68;
+const LIMBS: usize = 4;
+const BITS: usize = 68;
 
-// type Plonk = verifier::Plonk<KzgOnSameCurve<Bn256, Gwc19<Bn256>, LIMBS, BITS>>;
+type Plonk = verifier::plonk::PlonkVerifier<KzgAs<Bn256, Gwc19>>;
+type PlonkVerifier = verifier::plonk::PlonkVerifier<KzgAs<Bn256, Gwc19>, LimbsEncoding<LIMBS, BITS>>;
 
-// #[test]
-// fn test() {
-//     let vk: VerifyingKey<Bn256> = serde_json::from_str(TESTDATA_EVM.vk).unwrap();
-//     let protocol = compile(&vk);
+#[test]
+fn test() {
+    let vk: VerifyingKey<Bn256> = serde_json::from_str(TESTDATA_EVM.vk).unwrap();
+    let g1 = vk.svk();
+    let (g2, s_g2) = vk.dk();
+    let dk = (g1, g2, s_g2).into();
 
-//     let [public_signal] = TESTDATA_EVM.public_signals.map(|public_signals| {
-//         serde_json::from_str::<PublicSignals<Fr>>(public_signals)
-//             .unwrap()
-//             .to_vec()
-//     });
-//     let [proof] = TESTDATA_EVM.proofs.map(|proof| {
-//         serde_json::from_str::<Proof<Bn256>>(proof)
-//             .unwrap()
-//             .to_uncompressed_be()
-//     });
+    let protocol = compile(&vk);
 
-//     {
-//         let instances = [public_signal.clone()];
-//         let mut transcript = EvmTranscript::<G1Affine, NativeLoader, _, _>::new(proof.as_slice());
-//         let proof = Plonk::read_proof(&protocol, &instances, &mut transcript).unwrap();
-//         assert!(Plonk::verify(&vk.svk(), &vk.dk(), &protocol, &instances, &proof).unwrap());
-//     }
+    let [public_signal] = TESTDATA_EVM.public_signals.map(|public_signals| {
+        serde_json::from_str::<PublicSignals<Fr>>(public_signals)
+            .unwrap()
+            .to_vec()
+    });
+    let [proof] = TESTDATA_EVM.proofs.map(|proof| {
+        serde_json::from_str::<Proof<Bn256>>(proof)
+            .unwrap()
+            .to_uncompressed_be()
+    });
 
-//     let deployment_code = {
-//         let loader = EvmLoader::new::<Fq, Fr>();
-//         let mut transcript = EvmTranscript::<G1Affine, Rc<EvmLoader>, _, _>::new(loader.clone());
-//         let instances = transcript.load_instances(vec![public_signal.len()]);
-//         let proof = Plonk::read_proof(&protocol, &instances, &mut transcript).unwrap();
-//         Plonk::verify(&vk.svk(), &vk.dk(), &protocol, &instances, &proof).unwrap();
-//         loader.deployment_code()
-//     };
+    {
+        let instances = [public_signal.clone()];
+        let mut transcript = EvmTranscript::<G1Affine, NativeLoader, _, _>::new(proof.as_slice());
+        let proof = Plonk::read_proof(&dk, &protocol, &instances, &mut transcript).unwrap();
+        matches!(Plonk::verify(&dk, &protocol, &instances, &proof), Ok(_));
+    }
 
-//     let calldata = encode_calldata(&[public_signal], &proof);
-//     let success = {
-//         let mut evm = ExecutorBuilder::default()
-//             .with_gas_limit(u64::MAX.into())
-//             .build(Backend::new(MultiFork::new().0, None));
+    let deployment_code = {
+        let loader = EvmLoader::new::<Fq, Fr>();
+        let protocol = protocol.loaded(&loader);
+        let mut transcript = EvmTranscript::<G1Affine, Rc<EvmLoader>, _, _>::new(&loader);
+        let instances = transcript.load_instances(vec![public_signal.len()]);
+        let proof = PlonkVerifier::read_proof(&dk, &protocol, &instances, &mut transcript).unwrap();
+        PlonkVerifier::verify(&dk, &protocol, &instances, &proof).unwrap();
+        evm::compile_yul(&loader.yul_code())
+    };
 
-//         let caller = Address::from_low_u64_be(0xfe);
-//         let verifier = evm
-//             .deploy(caller, deployment_code.into(), 0.into(), None)
-//             .unwrap()
-//             .address;
-//         let result = evm
-//             .call_raw(caller, verifier, calldata.into(), 0.into())
-//             .unwrap();
+    let calldata = encode_calldata(&[public_signal.clone()], &proof);
+    let success = {
+        let mut evm = ExecutorBuilder::default()
+            .with_gas_limit(u64::MAX.into())
+            .build();
 
-//         dbg!(result.gas_used);
+        let caller = Address::from_low_u64_be(0xfe);
+        let verifier = evm
+            .deploy(caller, deployment_code.into(), 0.into())
+            .address
+            .unwrap();
+        let result = evm.call_raw(caller, verifier, calldata.into(), 0.into());
 
-//         !result.reverted
-//     };
-//     assert!(success);
-// }
+        dbg!(result.gas_used);
+        dbg!(result.exit_reason);
+        !result.reverted
+    };
+    assert!(success);
+}

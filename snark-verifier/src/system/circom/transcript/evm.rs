@@ -81,8 +81,9 @@ where
         let challenge_ptr = self.loader.allocate(0x20);
         let code = format!(
             "{{
-            let hash := mload({hash_ptr:#x})
-            mstore({challenge_ptr:#x}, mod(hash, f_q))
+                let hash := mload({hash_ptr:#x})
+                mstore({challenge_ptr:#x}, mod(hash, f_q))
+            }}
             "
         );
         self.loader.code_mut().runtime_append(code);
